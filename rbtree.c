@@ -36,6 +36,7 @@ void rotate_set(struct rb_node *old, struct rb_node *new,
  * left_rotate - left rotation one rb node.
  * @node: node to rotation.
  * @color: color after rotation.
+ * @ccolor: color of child.
  * @root: rbtree root of node.
  */
 static __always_inline void
@@ -58,6 +59,7 @@ left_rotate(struct rb_node *node, bool color, bool ccolor, struct rb_root *root)
  * right_rotate - right rotation one rb node.
  * @node: node to rotation.
  * @color: color after rotation.
+ * @ccolor: color of child.
  * @root: rbtree root of node.
  */
 static __always_inline void
@@ -178,11 +180,81 @@ void rb_fixup(struct rb_root *root, struct rb_node *node)
     }
 }
 
-void rb_del(const struct rb_root *root, struct rb_node *node)
+/**
+ * rb_replace - replace old node by new one.
+ * @root: rbtree root of element.
+ * @old: element to be replaced.
+ * @new: new element to insert.
+ */
+void rb_replace(struct rb_root *root, struct rb_node *old, struct rb_node *new)
 {
-    while (root && node) {
+    struct rb_node *parent = old->parent;
 
+    *new = *old;
+
+    if (old->left)
+        old->left->parent = new;
+    if (old->right)
+        old->right->parent = new;
+
+    child_change(old, new, parent, root);
+}
+
+/**
+ * rb_find - find @key in tree @root.
+ * @root: rbtree want to search.
+ * @key: key to match.
+ * @cmp: operator defining the node order.
+ */
+struct rb_node *rb_find(const struct rb_root *root, const void *key,
+                        long (*cmp)(const struct rb_node *, const void *key))
+{
+    struct rb_node *node = root->rb_node;
+    int ret;
+
+    while (node) {
+        ret = cmp(node, key);
+        if (ret < 0)
+            node = node->left;
+        else if(ret > 0)
+            node = node->right;
+        else
+            return node;
     }
+
+    return NULL;
+}
+
+/**
+ * rb_parent - find the parent node.
+ * @root: rbtree want to search.
+ * @parentp: pointer used to modify the parent node pointer.
+ * @node: new node to insert.
+ * @cmp: operator defining the node order.
+ */
+struct rb_node **rb_parent(struct rb_root *root, struct rb_node **parentp, struct rb_node *node,
+                           long (*cmp)(const struct rb_node *, const struct rb_node *))
+{
+    struct rb_node **link;
+    long ret;
+
+    link = &root->rb_node;
+    if (unlikely(!*link)) {
+        *parentp = NULL;
+        return link;
+    }
+
+    do {
+        ret = cmp(node, (*parentp = *link));
+        if (ret < 0)
+            link = &(*link)->left;
+        else if (ret > 0)
+            link = &(*link)->right;
+        else
+            return NULL;
+    } while (*link);
+
+    return link;
 }
 
 /**

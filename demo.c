@@ -9,6 +9,7 @@
 #include <stdlib.h>
 
 #define TEST_LEN 100
+static RB_ROOT(demo_root);
 
 struct rbtree_demo {
     struct rb_node rb;
@@ -16,79 +17,45 @@ struct rbtree_demo {
     unsigned long data;
 };
 
-#define demo_rb_entry(node) \
-    container_of(node, struct rbtree_demo, rb)
+#define rb_to_demo(node) \
+    rb_entry(node, struct rbtree_demo, rb)
 
-static RB_ROOT(demo_root);
-
-static inline struct rb_node **
-node_parent(struct rbtree_demo *new, struct rb_root *root, struct rb_node **parentp)
+static long demo_cmp(const struct rb_node *new, const struct rb_node *node)
 {
-    struct rbtree_demo *parent;
-    struct rb_node **link;
-
-    link = &root->rb_node;
-
-    if (unlikely(!*link)) {
-        *parentp = NULL;
-        return link;
-    }
-
-    do {
-        parent = demo_rb_entry(*link);
-
-        if (new->data < parent->data)
-            link = &(*link)->left;
-        else if (new->data > parent->data)
-            link = &(*link)->right;
-        else
-            return NULL;
-
-    } while (*link);
-
-    *parentp = &parent->rb;
-    return link;
+    struct rbtree_demo *demo_new = rb_to_demo(new);
+    struct rbtree_demo *demo_node = rb_to_demo(node);
+    return demo_node->data - demo_new->data;
 }
 
-static inline state node_insert(struct rbtree_demo *node)
+static void node_dump(struct rbtree_demo *node)
 {
-    struct rb_node *parent, **link;
-
-    link = node_parent(node, &demo_root, &parent);
-    if (unlikely(!link))
-        return -EFAULT;
-
-    rb_link(parent, link, &node->rb);
-    rb_fixup(&demo_root, &node->rb);
-
-    return 0;
-}
-
-static inline void node_dump(struct rbtree_demo *node)
-{
-    printf("  %08d: data 0x%08lx node %16p parent %16p left %16p right %16p color '%s'\n",
-                node->num, node->data, &node->rb, node->rb.parent,
-                node->rb.left, node->rb.right, node->rb.color ? "black" : "red");
+    printf("  %08d: data 0x%016lx node %16p parent %16p left %16p right %16p color '%s'\n",
+            node->num, node->data, &node->rb, node->rb.parent,
+            node->rb.left, node->rb.right, node->rb.color ? "black" : "red");
 }
 
 int main(void)
 {
-    struct rbtree_demo *node;
+    struct rbtree_demo *node, *tmp;
     unsigned int count;
 
     printf("Generate node:\n");
 
     for (count = 0; count < TEST_LEN; ++count) {
         node = malloc(sizeof(*node));
-        if (!node)
-            err(1, "insufficient memory\n");
+        if (!node) {
+            printf("insufficient memory\n");
+            goto error;
+        }
 
         node->num = count;
         node->data = ((unsigned long)rand() << 32) | rand();
-        printf("  %08d: 0x%08lx\n", count, node->data);
+        printf("  %08d: 0x%016lx\n", count, node->data);
 
-        if (node_insert(node))
-            err(1, "area overlaps\n");
+        if (rb_insert(&demo_root, &node->rb, demo_cmp)) {
+            printf("area overlaps\n");
+            goto error;
+        }
     }
 
     printf("Middle iteration:\n");
@@ -100,4 +67,10 @@ int main(void)
         node_dump(node);
 
     return 0;
+
+error:
+    rb_post_for_each_entry_safe(node, tmp, &demo_root, rb)
+        free(node);
+
+    return 1;
 }

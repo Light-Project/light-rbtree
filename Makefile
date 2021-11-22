@@ -11,4 +11,4 @@ clean:
 
 %.o:%.c $(head)
 	@ echo -e "  \e[32mCC\e[0m	" $@
-	@ gcc -o $@ -c $< -g -Wall -Werror
+	@ gcc -o $@ -c $< -g -Wall -Werror # -Wextra
