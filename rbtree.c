@@ -1,14 +1,22 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later */
 /*
  * Copyright(c) 2021 Sanpe <sanpeqf@gmail.com>
+ *          -- Based on Linux's rbtree :)
  */
 
 #include "macro.h"
 #include "rbtree.h"
 
-static __always_inline
-void child_change(struct rb_node *old, struct rb_node *new,
-                  struct rb_node *parent, struct rb_root *root)
+/**
+ * child_change - replace old child by new one.
+ * @root: rbtree root of node.
+ * @parent: parent to change child.
+ * @old: node to be replaced.
+ * @new: new node to insert.
+ */
+static __always_inline void
+child_change(struct rb_root *root, struct rb_node *parent,
+             struct rb_node *old, struct rb_node *new)
 {
     if (!parent)
         root->rb_node = new;
@@ -18,68 +26,82 @@ void child_change(struct rb_node *old, struct rb_node *new,
         parent->right = new;
 }
 
-static __always_inline
-void rotate_set(struct rb_node *old, struct rb_node *new,
-                bool color, struct rb_root *root)
+/**
+ * rotate_set - replace old child by new one.
+ * @root: rbtree root of node.
+ * @node: parent to change child.
+ * @new: node to be replaced.
+ * @child: managed child node.
+ * @color: color after rotation.
+ * @ccolor: color of child.
+ */
+static __always_inline void
+rotate_set(struct rb_root *root, struct rb_node *node, struct rb_node *new,
+           struct rb_node *child, unsigned int color, unsigned int ccolor)
 {
-    struct rb_node *parent = old->parent;
+    struct rb_node *parent = node->parent;
 
-    new->parent = old->parent;
-    new->color = old->color;
-    old->parent = new;
-    old->color = color;
+    new->parent = node->parent;
+    node->parent = new;
 
-    child_change(old, new, parent, root);
+    if (color != RB_NSET) {
+        new->color = node->color;
+        node->color = color;
+    }
+
+    if (child) {
+        if (ccolor != RB_NSET)
+            child->color = ccolor;
+        child->parent = node;
+    }
+
+    child_change(root, parent, node, new);
 }
 
 /**
- * left_rotate - left rotation one rb node.
+ * left_rotate - left rotation one node.
+ * @root: rbtree root of node.
  * @node: node to rotation.
  * @color: color after rotation.
  * @ccolor: color of child.
- * @root: rbtree root of node.
  */
-static __always_inline void
-left_rotate(struct rb_node *node, bool color, bool ccolor, struct rb_root *root)
+static __always_inline struct rb_node *
+left_rotate(struct rb_root *root, struct rb_node *node,
+            unsigned int color, unsigned int ccolor)
 {
-    struct rb_node *child, *parent = node->right;
+    struct rb_node *child, *successor = node->right;
 
     /* change left child */
-    child = node->right = parent->left;
-    if (child) {
-        child->parent = node;
-        child->color = ccolor;
-    }
+    child = node->right = successor->left;
+    successor->left = node;
 
-    parent->left = node;
-    rotate_set(node, parent, color, root);
+    rotate_set(root, node, successor, child, color, ccolor);
+    return child;
 }
 
 /**
- * right_rotate - right rotation one rb node.
+ * right_rotate - right rotation one node.
+ * @root: rbtree root of node.
  * @node: node to rotation.
  * @color: color after rotation.
  * @ccolor: color of child.
- * @root: rbtree root of node.
  */
-static __always_inline void
-right_rotate(struct rb_node *node, bool color, bool ccolor, struct rb_root *root)
+static __always_inline struct rb_node *
+right_rotate(struct rb_root *root, struct rb_node *node,
+             unsigned int color, unsigned int ccolor)
 {
-    struct rb_node *child, *parent = node->left;
+    struct rb_node *child, *successor = node->left;
 
     /* change right child */
-    child = node->left = parent->right;
-    if (child) {
-        child->parent = node;
-        child->color = ccolor;
-    }
+    child = node->left = successor->right;
+    successor->right = node;
 
-    parent->right = node;
-    rotate_set(node, parent, color, root);
+    rotate_set(root, node, successor, child, color, ccolor);
+    return child;
 }
 
 /**
- * rb_fixup - balance newly inserted nodes.
+ * rb_fixup - balance after insert node.
  * @root: rbtree root of node.
  * @node: new inserted node.
  */
@@ -90,13 +112,24 @@ void rb_fixup(struct rb_root *root, struct rb_node *node)
     while (root && node) {
         parent = node->parent;
 
-        /* If node is root */
+        /*
+         * The inserted node is root. Either this is the
+         * first node, or we recursed at Case 1 below and
+         * are no longer violating 4).
+         */
+
         if (unlikely(!parent)) {
             node->color = RB_BLACK;
             break;
         }
 
-        /* If there is a black parent, we are done. */
+        /*
+         * If there is a black parent, we are done.
+         * Otherwise, take some corrective action as,
+         * per 4), we don't want a red root or two
+         * consecutive red nodes.
+         */
+
         if (parent->color == RB_BLACK)
             break;
 
@@ -135,14 +168,14 @@ void rb_fixup(struct rb_root *root, struct rb_node *node)
              *     \           /
              *      n         p
              *     /           \
-             *    t             T
+             *    c             C
              *
              * This still leaves us in violation of 4), the
              * continuation into Case 3 will fix that.
              */
 
             if (node == parent->right)
-                left_rotate(parent, RB_RED, RB_BLACK, root);
+                left_rotate(root, parent, RB_NSET, RB_BLACK);
 
             /*
              * Case 3 - node's uncle is black and node is
@@ -152,10 +185,10 @@ void rb_fixup(struct rb_root *root, struct rb_node *node)
              *       / \         / \
              *      p   U  -->  n   g
              *     / \             / \
-             *    n   t           T   U
+             *    n   s           S   U
              */
 
-            right_rotate(gparent, RB_RED, RB_BLACK, root);
+            right_rotate(root, gparent, RB_RED, RB_BLACK);
             break;
         } else {
             /* parent == gparent->right */
@@ -171,20 +204,290 @@ void rb_fixup(struct rb_root *root, struct rb_node *node)
 
             /* Case 2 - right rotate at parent */
             if (node == parent->left)
-                right_rotate(parent, RB_RED, RB_BLACK, root);
+                right_rotate(root, parent, RB_NSET, RB_BLACK);
 
             /* Case 3 - left rotate at gparent */
-            left_rotate(gparent, RB_RED, RB_BLACK, root);
+            left_rotate(root, gparent, RB_RED, RB_BLACK);
             break;
         }
     }
 }
 
 /**
+ * rb_erase - balance after remove node.
+ * @root: rbtree root of node.
+ * @parent: parent of removed node.
+ */
+void rb_erase(struct rb_root *root, struct rb_node *parent)
+{
+    struct rb_node *tmp1, *tmp2, *sibling, *node = NULL;
+
+    while (root && parent) {
+        /*
+         * Loop invariants:
+         * - node is black (or NULL on first iteration)
+         * - node is not the root (parent is not NULL)
+         * - All leaf paths going through parent and node have a
+         *   black node count that is 1 lower than other leaf paths.
+         */
+
+        sibling = parent->right;
+        if (node != sibling) {
+            /*
+             * Case 1 - left rotate at parent
+             *
+             *     P               S
+             *    / \             / \
+             *   N   s    -->    p   Sr
+             *      / \         / \
+             *     Sl  Sr      N   Sl
+             */
+
+            if (sibling->color == RB_RED)
+                sibling = left_rotate(root, parent, RB_RED, RB_BLACK);
+
+            tmp2 = sibling->right;
+            if (!tmp2 || tmp2->color == RB_BLACK) {
+                tmp1 = sibling->left;
+
+                /*
+                 * Case 2 - sibling color flip
+                 * (p could be either color here)
+                 *
+                 *    (p)           (p)
+                 *    / \           / \
+                 *   N   S    -->  N   s
+                 *      / \           / \
+                 *     Sl  Sr        Sl  Sr
+                 *
+                 * This leaves us violating 5) which
+                 * can be fixed by flipping p to black
+                 * if it was red, or by recursing at p.
+                 * p is red when coming from Case 1.
+                 */
+
+                if (!tmp1 || tmp1->color == RB_BLACK) {
+                    sibling->color = RB_RED;
+                    if (parent->color == RB_RED)
+                        parent->color = RB_BLACK;
+                    else {
+                        node = parent;
+                        parent = node->parent;
+                        if (parent)
+                            continue;
+                    }
+                    break;
+                }
+
+                /*
+                 * Case 3 - right rotate at sibling
+                 * (p could be either color here)
+                 *
+                 *   (p)           (p)
+                 *   / \           / \
+                 *  N   S    -->  N   sl
+                 *     / \             \
+                 *    sl  Sr            S
+                 *      \              / \
+                 *       t            T   Sr
+                 *
+                 * Note: p might be red, and then both
+                 * p and sl are red after rotation(which
+                 * breaks property 4). This is fixed in
+                 * Case 4 (in __rb_rotate_set_parents()
+                 *         which set sl the color of p
+                 *         and set p RB_BLACK)
+                 *
+                 *   (p)            (sl)
+                 *   / \            /  \
+                 *  N   sl   -->   P    S
+                 *       \        /      \
+                 *        S      N        Sr
+                 *         \
+                 *          Sr
+                 */
+
+                right_rotate(root, sibling, RB_NSET, RB_BLACK);
+                tmp2 = sibling;
+            }
+
+            /*
+             * Case 4 - left rotate at parent + color flips
+             * (p and sl could be either color here.
+             *  After rotation, p becomes black, s acquires
+             *  p's color, and sl keeps its color)
+             *
+             *      (p)             (s)
+             *      / \             / \
+             *     N   S     -->   P   Sr
+             *        / \         / \
+             *      (sl) sr      N  (sl)
+             */
+
+            left_rotate(root, parent, RB_BLACK, RB_NSET);
+            tmp2->color = RB_BLACK;
+            break;
+        } else {
+            sibling = parent->left;
+
+            /* Case 1 - right rotate at parent */
+            if (sibling->color == RB_RED)
+                sibling = right_rotate(root, parent, RB_RED, RB_BLACK);
+
+            tmp1 = sibling->left;
+            if (!tmp1 || tmp1->color == RB_BLACK) {
+                tmp2 = sibling->right;
+
+                /* Case 2 - sibling color flip */
+                if (!tmp2 || tmp2->color == RB_BLACK) {
+                    sibling->color = RB_RED;
+                    if (parent->color == RB_RED)
+                        parent->color = RB_BLACK;
+                    else {
+                        node = parent;
+                        parent = node->parent;
+                        if (parent)
+                            continue;
+                    }
+                    break;
+                }
+
+                /* Case 3 - left rotate at sibling */
+                left_rotate(root, sibling, RB_NSET, RB_BLACK);
+                tmp1 = sibling;
+            }
+
+            /* Case 4 - right rotate at parent + color flips */
+            right_rotate(root, parent, RB_BLACK, RB_NSET);
+            tmp1->color = RB_BLACK;
+            break;
+        }
+    }
+}
+
+/**
+ * rb_remove - remove node form rbtree.
+ * @root: rbtree root of node.
+ * @node: node to remove.
+ */
+struct rb_node *rb_remove(struct rb_root *root, struct rb_node *node)
+{
+    struct rb_node *parent = node->parent, *rebalance = NULL;
+    struct rb_node *child1 = node->left;
+    struct rb_node *child2 = node->right;
+
+    if (!child1 && !child2) {
+        /*
+         * Case 1: node to erase has no child.
+         *
+         *     (p)        (p)
+         *     / \          \
+         *   (n) (s)  ->    (s)
+         *
+         */
+
+        if (node->color == RB_BLACK)
+            rebalance = parent;
+        child_change(root, parent, node, NULL);
+    } else if (!child2) {
+        /*
+         * Case 1: node to erase only has left child.
+         *
+         *      (p)          (p)
+         *      / \          / \
+         *    (n) (s)  ->  (c) (s)
+         *    /
+         *  (c)
+         *
+         */
+
+        child1->color = node->color;
+        child1->parent = node->parent;
+        child_change(root, parent, node, child1);
+    } else if (!child1) {
+        /*
+         * Case 1: node to erase only has right child.
+         *
+         *    (p)          (p)
+         *    / \          / \
+         *  (n) (s)  ->  (c) (s)
+         *    \
+         *    (c)
+         */
+
+        child2->color = node->color;
+        child2->parent = node->parent;
+        child_change(root, parent, node, child2);
+    } else { /* child1 && child2 */
+        struct rb_node *tmp, *successor = child2;
+
+        child1 = child2->left;
+        if (!child1) {
+            /*
+             * Case 2: node's successor is its right child
+             *
+             *    (n)          (s)
+             *    / \          / \
+             *  (x) (s)  ->  (x) (c)
+             *        \
+             *        (c)
+             */
+
+            parent = successor;
+            tmp = successor->right;
+        } else {
+            /*
+             * Case 3: node's successor is leftmost under
+             * node's right child subtree
+             *
+             *    (n)          (s)
+             *    / \          / \
+             *  (x) (y)  ->  (x) (y)
+             *      /            /
+             *    (p)          (p)
+             *    /            /
+             *  (s)          (c)
+             *    \
+             *    (c)
+             */
+
+            do {
+                parent = successor;
+                successor = child1;
+                child1 = child1->left;
+            } while (child1);
+
+            tmp = successor->right;
+            parent->left = tmp;
+            successor->right = child2;
+            child2->parent = successor;
+        }
+
+        child1 = node->left;
+        successor->left = child1;
+        child1->parent = successor;
+
+        child1 = node->parent;
+        child_change(root, child1, node, successor);
+
+        if (tmp) {
+            tmp->parent = parent;
+            tmp->color = RB_BLACK;
+        } else if (successor->color == RB_BLACK)
+            rebalance = parent;
+
+        successor->parent = child1;
+        successor->color = node->color;
+    }
+
+    return rebalance;
+}
+
+/**
  * rb_replace - replace old node by new one.
- * @root: rbtree root of element.
- * @old: element to be replaced.
- * @new: new element to insert.
+ * @root: rbtree root of node.
+ * @old: node to be replaced.
+ * @new: new node to insert.
  */
 void rb_replace(struct rb_root *root, struct rb_node *old, struct rb_node *new)
 {
@@ -197,7 +500,7 @@ void rb_replace(struct rb_root *root, struct rb_node *old, struct rb_node *new)
     if (old->right)
         old->right->parent = new;
 
-    child_change(old, new, parent, root);
+    child_change(root, parent, old, new);
 }
 
 /**
