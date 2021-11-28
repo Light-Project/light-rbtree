@@ -27,7 +27,7 @@ child_change(struct rb_root *root, struct rb_node *parent,
 }
 
 /**
- * rotate_set - replace old child by new one.
+ * rotate_set - general set after rotate.
  * @root: rbtree root of node.
  * @node: parent to change child.
  * @new: node to be replaced.

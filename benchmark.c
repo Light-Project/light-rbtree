@@ -12,24 +12,24 @@
 
 #define RB_DEBUG 0
 #define TEST_LEN 1000000
-static RB_ROOT(demo_root);
+static RB_ROOT(bench_root);
 
-struct rbtree_demo {
+struct bench_node {
     struct rb_node rb;
     unsigned int num;
     unsigned long data;
 };
 
-#define rb_to_demo(node) \
-    rb_entry_safe(node, struct rbtree_demo, rb)
+#define rb_to_bench(node) \
+    rb_entry_safe(node, struct bench_node, rb)
 
 #if RB_DEBUG
-static void node_dump(struct rbtree_demo *node)
+static void node_dump(struct bench_node *node)
 {
     printf("  %04d: ", node->num);
-    printf("parent %-4d ", node->rb.parent ? rb_to_demo(node->rb.parent)->num : 0);
-    printf("left %-4d ", node->rb.left ? rb_to_demo(node->rb.left)->num : 0);
-    printf("right %-4d ", node->rb.right ? rb_to_demo(node->rb.right)->num : 0);
+    printf("parent %-4d ", node->rb.parent ? rb_to_bench(node->rb.parent)->num : 0);
+    printf("left %-4d ", node->rb.left ? rb_to_bench(node->rb.left)->num : 0);
+    printf("right %-4d ", node->rb.right ? rb_to_bench(node->rb.right)->num : 0);
     printf("data 0x%16lx ", node->data);
     printf("color'%s' ", node->rb.color ? "black" : "red");
     printf("\n");
@@ -59,14 +59,14 @@ static unsigned int test_deepth(struct rb_node *node)
 
 static long demo_cmp(const struct rb_node *a, const struct rb_node *b)
 {
-    struct rbtree_demo *demo_a = rb_to_demo(a);
-    struct rbtree_demo *demo_b = rb_to_demo(b);
+    struct bench_node *demo_a = rb_to_bench(a);
+    struct bench_node *demo_b = rb_to_bench(b);
     return demo_a->data - demo_b->data;
 }
 
 int main(void)
 {
-    struct rbtree_demo *node, *tmp;
+    struct bench_node *node, *tmp;
     struct tms start_tms, stop_tms;
     clock_t start, stop;
     unsigned int count, ticks;
@@ -90,7 +90,7 @@ int main(void)
         printf("  %08d: 0x%016lx\n", node->num, node->data);
 #endif
 
-        ret = rb_insert(&demo_root, &node->rb, demo_cmp);
+        ret = rb_insert(&bench_root, &node->rb, demo_cmp);
         if (ret) {
             printf("Random Data Conflict!\n");
             goto error;
@@ -99,13 +99,13 @@ int main(void)
     stop = times(&stop_tms);
     time_dump(ticks, start, stop, &start_tms, &stop_tms);
 
-    count = test_deepth(demo_root.rb_node);
+    count = test_deepth(bench_root.rb_node);
     printf("  rb deepth: %d\n", count);
 
     /* Start detection middle order iteration. */
     start = times(&start_tms);
     printf("Middle Iteration:\n");
-    rb_for_each_entry(node, &demo_root, rb)
+    rb_for_each_entry(node, &bench_root, rb)
         node_dump(node);
     stop = times(&stop_tms);
     time_dump(ticks, start, stop, &start_tms, &stop_tms);
@@ -113,20 +113,22 @@ int main(void)
     /* Start detection postorder order iteration. */
     start = times(&start_tms);
     printf("Postorder Iteration:\n");
-    rb_post_for_each_entry(node, &demo_root, rb)
+    rb_post_for_each_entry(node, &bench_root, rb)
         node_dump(node);
     stop = times(&stop_tms);
     time_dump(ticks, start, stop, &start_tms, &stop_tms);
 
     printf("Deletion All Node...\n");
 error:
-    rb_post_for_each_entry_safe(node, tmp, &demo_root, rb) {
-        rb_delete(&demo_root, &node->rb);
+    rb_post_for_each_entry_safe(node, tmp, &bench_root, rb) {
+        rb_delete(&bench_root, &node->rb);
         free(node);
     }
 
     if (!ret)
         printf("Done.\n");
+    else
+        printf("Abort.\n");
 
     return ret;
 }

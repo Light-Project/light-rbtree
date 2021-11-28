@@ -26,12 +26,12 @@ struct rb_root {
 #define RB_ROOT(name) \
     struct rb_root name = {NULL};
 
-#define	rb_entry(ptr, type, member) \
+#define rb_entry(ptr, type, member) \
     container_of(ptr, type, member)
 
 #define rb_entry_safe(ptr, type, member) ({     \
     typeof(ptr) _ptr = (ptr);                   \
-	_ptr ? rb_entry(_ptr, type, member) : NULL; \
+    _ptr ? rb_entry(_ptr, type, member) : NULL; \
 })
 
 typedef long (*rb_find_t)(const struct rb_node *, const void *key);
