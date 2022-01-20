@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
-head := rbtree.h macro.h
+head := rbtree.h
 demo := benchmark simple
 obj := rbtree.o benchmark.o simple.o
 

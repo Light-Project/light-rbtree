@@ -4,7 +4,6 @@
  *          -- Based on Linux's rbtree :)
  */
 
-#include "macro.h"
 #include "rbtree.h"
 
 /**
@@ -497,6 +496,7 @@ void rb_replace(struct rb_root *root, struct rb_node *old, struct rb_node *new)
 
     if (old->left)
         old->left->parent = new;
+
     if (old->right)
         old->right->parent = new;
 
@@ -536,10 +536,14 @@ struct rb_node *rb_find(const struct rb_root *root, const void *key,
  * @cmp: operator defining the node order.
  */
 struct rb_node **rb_parent(struct rb_root *root, struct rb_node **parentp, struct rb_node *node,
-                           long (*cmp)(const struct rb_node *, const struct rb_node *))
+                           long (*cmp)(const struct rb_node *, const struct rb_node *), bool *leftmost)
 {
     struct rb_node **link;
+    bool leftmost_none;
     long ret;
+
+    if (!leftmost)
+        leftmost = &leftmost_none;
 
     link = &root->rb_node;
     if (unlikely(!*link)) {
@@ -551,9 +555,10 @@ struct rb_node **rb_parent(struct rb_root *root, struct rb_node **parentp, struc
         ret = cmp(node, (*parentp = *link));
         if (ret < 0)
             link = &(*link)->left;
-        else if (ret > 0)
+        else if (ret > 0) {
             link = &(*link)->right;
-        else
+            *leftmost = false;
+        } else
             return NULL;
     } while (*link);
 

@@ -10,9 +10,9 @@
 #include <unistd.h>
 #include <sys/times.h>
 
-#define RB_DEBUG 0
-#define TEST_LEN 1000000
-static RB_ROOT(bench_root);
+#define RB_DEBUG    0
+#define RB_CACHED   1
+#define TEST_LEN    1000000
 
 struct bench_node {
     struct rb_node rb;
@@ -36,6 +36,24 @@ static void node_dump(struct bench_node *node)
 }
 #else
 # define node_dump(node) ((void)(node))
+#endif
+
+#if RB_CACHED
+static RB_ROOT_CACHED(bench_root);
+# define bc_insert                      rb_cached_insert
+# define bc_delete                      rb_cached_delete
+# define bc_for_each_entry              rb_cached_for_each_entry
+# define bc_post_for_each_entry         rb_cached_post_for_each_entry
+# define bc_post_for_each_entry_safe    rb_cached_post_for_each_entry_safe
+# define bc_deepth(cached)              test_deepth((cached)->root.rb_node)
+#else
+static RB_ROOT(bench_root);
+# define bc_insert                      rb_insert
+# define bc_delete                      rb_delete
+# define bc_for_each_entry              rb_for_each_entry
+# define bc_post_for_each_entry         rb_post_for_each_entry
+# define bc_post_for_each_entry_safe    rb_post_for_each_entry_safe
+# define bc_deepth(root)                test_deepth((root)->rb_node)
 #endif
 
 static void time_dump(int ticks, clock_t start, clock_t stop, struct tms *start_tms, struct tms *stop_tms)
@@ -90,7 +108,7 @@ int main(void)
         printf("  %08d: 0x%016lx\n", node->num, node->data);
 #endif
 
-        ret = rb_insert(&bench_root, &node->rb, demo_cmp);
+        ret = bc_insert(&bench_root, &node->rb, demo_cmp);
         if (ret) {
             printf("Random Data Conflict!\n");
             goto error;
@@ -99,13 +117,13 @@ int main(void)
     stop = times(&stop_tms);
     time_dump(ticks, start, stop, &start_tms, &stop_tms);
 
-    count = test_deepth(bench_root.rb_node);
+    count = bc_deepth(&bench_root);
     printf("  rb deepth: %d\n", count);
 
     /* Start detection middle order iteration. */
     start = times(&start_tms);
     printf("Middle Iteration:\n");
-    rb_for_each_entry(node, &bench_root, rb)
+    bc_for_each_entry(node, &bench_root, rb)
         node_dump(node);
     stop = times(&stop_tms);
     time_dump(ticks, start, stop, &start_tms, &stop_tms);
@@ -113,15 +131,15 @@ int main(void)
     /* Start detection postorder order iteration. */
     start = times(&start_tms);
     printf("Postorder Iteration:\n");
-    rb_post_for_each_entry(node, &bench_root, rb)
+    bc_post_for_each_entry(node, &bench_root, rb)
         node_dump(node);
     stop = times(&stop_tms);
     time_dump(ticks, start, stop, &start_tms, &stop_tms);
 
     printf("Deletion All Node...\n");
 error:
-    rb_post_for_each_entry_safe(node, tmp, &bench_root, rb) {
-        rb_delete(&bench_root, &node->rb);
+    bc_post_for_each_entry_safe(node, tmp, &bench_root, rb) {
+        bc_delete(&bench_root, &node->rb);
         free(node);
     }
 
