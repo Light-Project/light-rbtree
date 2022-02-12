@@ -555,11 +555,10 @@ struct rb_node **rb_parent(struct rb_root *root, struct rb_node **parentp, struc
         ret = cmp(node, (*parentp = *link));
         if (ret < 0)
             link = &(*link)->left;
-        else if (ret > 0) {
+        else {
             link = &(*link)->right;
             *leftmost = false;
-        } else
-            return NULL;
+        }
     } while (*link);
 
     return link;

@@ -39,6 +39,12 @@ struct rb_root_cached {
 #define RB_ROOT_CACHED(name) \
     struct rb_root_cached name = {{NULL}, NULL};
 
+#define RB_EMPTY_NODE(node) \
+    ((node)->parent == (node))
+
+#define RB_CLEAR_NODE(node) \
+    ((node)->parent = (node))
+
 #define rb_entry(ptr, type, member) ({                  \
     const typeof(((type *)0)->member) *__mptr = (ptr);  \
     (type *)((char *)__mptr - offsetof(type,member));   \
@@ -130,17 +136,13 @@ static inline void rb_insert_node(struct rb_root *root, struct rb_node *parent,
  * @node: new node to insert.
  * @cmp: operator defining the node order.
  */
-static inline int rb_insert(struct rb_root *root, struct rb_node *node,
+static inline void rb_insert(struct rb_root *root, struct rb_node *node,
                             long (*cmp)(const struct rb_node *, const struct rb_node *))
 {
     struct rb_node *parent, **link;
 
     link = rb_parent(root, &parent, node, cmp, NULL);
-    if (unlikely(!link))
-        return -EINVAL;
-
     rb_insert_node(root, parent, link, node);
-    return 0;
 }
 
 /**
@@ -206,18 +208,14 @@ static inline void rb_cached_insert_node(struct rb_root_cached *cached, struct r
  * @node: new node to insert.
  * @cmp: operator defining the node order.
  */
-static inline int rb_cached_insert(struct rb_root_cached *cached, struct rb_node *node,
-                                   long (*cmp)(const struct rb_node *, const struct rb_node *))
+static inline void rb_cached_insert(struct rb_root_cached *cached, struct rb_node *node,
+                                    long (*cmp)(const struct rb_node *, const struct rb_node *))
 {
     struct rb_node *parent, **link;
     bool leftmost = true;
 
     link = rb_parent(&cached->root, &parent, node, cmp, &leftmost);
-    if (unlikely(!link))
-        return -EINVAL;
-
     rb_cached_insert_node(cached, parent, link, node, leftmost);
-    return 0;
 }
 
 /**
