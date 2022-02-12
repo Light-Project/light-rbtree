@@ -108,11 +108,7 @@ int main(void)
         printf("  %08d: 0x%016lx\n", node->num, node->data);
 #endif
 
-        ret = bc_insert(&bench_root, &node->rb, demo_cmp);
-        if (ret) {
-            printf("Random Data Conflict!\n");
-            goto error;
-        }
+        bc_insert(&bench_root, &node->rb, demo_cmp);
     }
     stop = times(&stop_tms);
     time_dump(ticks, start, stop, &start_tms, &stop_tms);

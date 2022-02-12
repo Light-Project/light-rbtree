@@ -13,7 +13,7 @@
  * @old: node to be replaced.
  * @new: new node to insert.
  */
-static __always_inline void
+static inline void
 child_change(struct rb_root *root, struct rb_node *parent,
              struct rb_node *old, struct rb_node *new)
 {
@@ -34,7 +34,7 @@ child_change(struct rb_root *root, struct rb_node *parent,
  * @color: color after rotation.
  * @ccolor: color of child.
  */
-static __always_inline void
+static inline void
 rotate_set(struct rb_root *root, struct rb_node *node, struct rb_node *new,
            struct rb_node *child, unsigned int color, unsigned int ccolor)
 {
@@ -64,7 +64,7 @@ rotate_set(struct rb_root *root, struct rb_node *node, struct rb_node *new,
  * @color: color after rotation.
  * @ccolor: color of child.
  */
-static __always_inline struct rb_node *
+static inline struct rb_node *
 left_rotate(struct rb_root *root, struct rb_node *node,
             unsigned int color, unsigned int ccolor)
 {
@@ -85,7 +85,7 @@ left_rotate(struct rb_root *root, struct rb_node *node,
  * @color: color after rotation.
  * @ccolor: color of child.
  */
-static __always_inline struct rb_node *
+static inline struct rb_node *
 right_rotate(struct rb_root *root, struct rb_node *node,
              unsigned int color, unsigned int ccolor)
 {
@@ -568,7 +568,7 @@ struct rb_node **rb_parent(struct rb_root *root, struct rb_node **parentp, struc
  * left_far - go left as we can.
  * @node: node to go left.
  */
-static __always_inline
+static inline
 struct rb_node *left_far(const struct rb_node *node)
 {
     while (node->left)
@@ -581,7 +581,7 @@ struct rb_node *left_far(const struct rb_node *node)
  * right_far - go right as we can.
  * @node: node to go right.
  */
-static __always_inline
+static inline
 struct rb_node *right_far(const struct rb_node *node)
 {
     while (node->right)
@@ -594,7 +594,7 @@ struct rb_node *right_far(const struct rb_node *node)
  * left_deep - go left deep as we can.
  * @node: node to go left deep.
  */
-static __always_inline
+static inline
 struct rb_node *left_deep(const struct rb_node *node)
 {
     while (node) {
@@ -613,7 +613,7 @@ struct rb_node *left_deep(const struct rb_node *node)
  * right_deep - go right deep as we can.
  * @node: node to go right deep.
  */
-static __always_inline
+static inline
 struct rb_node *right_deep(const struct rb_node *node)
 {
     while (node) {

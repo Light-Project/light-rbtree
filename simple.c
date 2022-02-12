@@ -37,9 +37,7 @@ int main(void)
             goto error;
 
         node->data = ((unsigned long)rand() << 32) | rand();
-        ret = rb_insert(&simple_root, &node->rb, demo_cmp);
-        if (ret)
-            goto error;
+        rb_insert(&simple_root, &node->rb, demo_cmp);
     }
 
     printf("Middle Iteration:\n");
