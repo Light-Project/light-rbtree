@@ -4,7 +4,7 @@ Light-rbtree is a red black tree library implemented in C language. Although it 
 
 ## Compilation Instructions
 
-We don't need any external libraries, so just make it directly in the project root directory.
+It does not has any external dependency, so just make it directly in the project root directory.
 
 ```shell
 cd light-rbtree
