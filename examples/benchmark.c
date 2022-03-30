@@ -12,7 +12,7 @@
 
 #define RB_DEBUG    0
 #define RB_CACHED   1
-#define TEST_LEN    10000000
+#define TEST_LEN    1000000
 
 struct bench_node {
     struct rb_node rb;
