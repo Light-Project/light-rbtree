@@ -1,6 +1,6 @@
 # Light-rbtree user manual 
 
-Light-rbtree is a red black tree library implemented in C language. Although it has a relatively small amount of code, its performance is very powerful. It supports single command insertion, deletion and search. The best thing is that it supports C language for style traversal iterators and supports medium order traversal and subsequent traversal respectively. We will introduce how to use it in detail below.
+Light-rbtree is a red black tree library implemented in C language. Although it has a relatively small amount of code, its performance is very powerful. It supports single command insertion, deletion and search. The best thing is that it supports C language for style traversal iterators and supports medium order traversal and subsequent traversal respectively.
 
 ## Compilation Instructions
 
