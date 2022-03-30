@@ -10,7 +10,7 @@ all: $(demo)
 	@ echo -e "  \e[32mCC\e[0m	" $@
 	@ gcc -o $@ -c $< $(flags)
 
-$(demo): $(obj)
+$(demo): $(obj) $(addsuffix .c,$(demo))
 	@ echo -e "  \e[34mMKELF\e[0m	" $@
 	@ gcc -o $@ $@.c $<  $(flags)
 
