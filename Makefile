@@ -1,8 +1,8 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
-flags = -g -O2 -Wall -Werror -Wextra
-head  = rbtree.h
-demo  = benchmark simple
-obj   = rbtree.o
+flags = -g -O2 -Wall -Werror -Wextra -I src/
+head  = src/rbtree.h
+obj   = src/rbtree.o
+demo  = examples/benchmark examples/simple
 
 all: $(demo)
 
