@@ -26,7 +26,7 @@ child_change(struct rb_root *root, struct rb_node *parent,
 }
 
 /**
- * rotate_set - general set after rotate.
+ * rotate_set - replace old child by new one.
  * @root: rbtree root of node.
  * @node: parent to change child.
  * @new: node to be replaced.
@@ -496,7 +496,6 @@ void rb_replace(struct rb_root *root, struct rb_node *old, struct rb_node *new)
 
     if (old->left)
         old->left->parent = new;
-
     if (old->right)
         old->right->parent = new;
 
@@ -509,21 +508,56 @@ void rb_replace(struct rb_root *root, struct rb_node *old, struct rb_node *new)
  * @key: key to match.
  * @cmp: operator defining the node order.
  */
-struct rb_node *rb_find(const struct rb_root *root, const void *key,
-                        long (*cmp)(const struct rb_node *, const void *key))
+struct rb_node *rb_find(const struct rb_root *root, const void *key, rb_find_t cmp)
 {
     struct rb_node *node = root->rb_node;
-    int ret;
+    long ret;
 
     while (node) {
         ret = cmp(node, key);
-        if (ret < 0)
+        if (ret == LONG_MIN)
+            return NULL;
+        else if (ret < 0)
             node = node->left;
-        else if(ret > 0)
+        else if (ret > 0)
             node = node->right;
         else
             return node;
     }
+
+    return NULL;
+}
+
+/**
+ * rb_find_last - find @key in tree @root and return parent.
+ * @root: rbtree want to search.
+ * @key: key to match.
+ * @cmp: operator defining the node order.
+ * @parentp: pointer used to modify the parent node pointer.
+ * @linkp: pointer used to modify the point to pointer to child node.
+ */
+struct rb_node *rb_find_last(struct rb_root *root, const void *key, rb_find_t cmp,
+                             struct rb_node **parentp, struct rb_node ***linkp)
+{
+    long ret;
+
+    *linkp = &root->rb_node;
+    if (unlikely(!**linkp)) {
+        *parentp = NULL;
+        return NULL;
+    }
+
+    do {
+        ret = cmp((*parentp = **linkp), key);
+        if (ret == LONG_MIN)
+            return NULL;
+        else if (ret < 0)
+            *linkp = &(**linkp)->left;
+        else if (ret > 0)
+            *linkp = &(**linkp)->right;
+        else
+            return **linkp;
+    } while (**linkp);
 
     return NULL;
 }
@@ -535,12 +569,12 @@ struct rb_node *rb_find(const struct rb_root *root, const void *key,
  * @node: new node to insert.
  * @cmp: operator defining the node order.
  */
-struct rb_node **rb_parent(struct rb_root *root, struct rb_node **parentp, struct rb_node *node,
-                           long (*cmp)(const struct rb_node *, const struct rb_node *), bool *leftmost)
+struct rb_node **rb_parent(struct rb_root *root, struct rb_node **parentp,
+                           struct rb_node *node, rb_cmp_t cmp, bool *leftmost)
 {
     struct rb_node **link;
     bool leftmost_none;
-    long ret;
+    long retval;
 
     if (!leftmost)
         leftmost = &leftmost_none;
@@ -552,8 +586,8 @@ struct rb_node **rb_parent(struct rb_root *root, struct rb_node **parentp, struc
     }
 
     do {
-        ret = cmp(node, (*parentp = *link));
-        if (ret < 0)
+        retval = cmp(node, (*parentp = *link));
+        if (retval < 0)
             link = &(*link)->left;
         else {
             link = &(*link)->right;
@@ -565,11 +599,10 @@ struct rb_node **rb_parent(struct rb_root *root, struct rb_node **parentp, struc
 }
 
 /**
- * left_far - go left as we can.
+ * rb_left_far - go left as we can.
  * @node: node to go left.
  */
-static inline
-struct rb_node *left_far(const struct rb_node *node)
+struct rb_node *rb_left_far(const struct rb_node *node)
 {
     while (node->left)
         node = node->left;
@@ -578,11 +611,10 @@ struct rb_node *left_far(const struct rb_node *node)
 }
 
 /**
- * right_far - go right as we can.
+ * rb_right_far - go right as we can.
  * @node: node to go right.
  */
-static inline
-struct rb_node *right_far(const struct rb_node *node)
+struct rb_node *rb_right_far(const struct rb_node *node)
 {
     while (node->right)
         node = node->right;
@@ -591,11 +623,10 @@ struct rb_node *right_far(const struct rb_node *node)
 }
 
 /**
- * left_deep - go left deep as we can.
+ * rb_left_deep - go left deep as we can.
  * @node: node to go left deep.
  */
-static inline
-struct rb_node *left_deep(const struct rb_node *node)
+struct rb_node *rb_left_deep(const struct rb_node *node)
 {
     while (node) {
         if (node->left)
@@ -610,11 +641,10 @@ struct rb_node *left_deep(const struct rb_node *node)
 }
 
 /**
- * right_deep - go right deep as we can.
+ * rb_right_deep - go right deep as we can.
  * @node: node to go right deep.
  */
-static inline
-struct rb_node *right_deep(const struct rb_node *node)
+struct rb_node *rb_right_deep(const struct rb_node *node)
 {
     while (node) {
         if (node->right)
@@ -640,7 +670,7 @@ struct rb_node *rb_first(const struct rb_root *root)
         return NULL;
 
     /* Get the leftmost node */
-    node = left_far(node);
+    node = rb_left_far(node);
     return node;
 }
 
@@ -652,7 +682,7 @@ struct rb_node *rb_last(const struct rb_root *root)
         return NULL;
 
     /* Get the rightmost node */
-    node = right_far(node);
+    node = rb_right_far(node);
     return node;
 }
 
@@ -669,7 +699,7 @@ struct rb_node *rb_prev(const struct rb_node *node)
      */
     if (node->left) {
         node = node->left;
-        return right_far(node);
+        return rb_right_far(node);
     }
 
     /*
@@ -695,7 +725,7 @@ struct rb_node *rb_next(const struct rb_node *node)
      */
     if (node->right) {
         node = node->right;
-        return left_far(node);
+        return rb_left_far(node);
     }
 
     /*
@@ -719,7 +749,7 @@ struct rb_node *rb_post_first(const struct rb_root *root)
     if (!root || !node)
         return NULL;
 
-    node = left_deep(node);
+    node = rb_left_deep(node);
     return node;
 }
 
@@ -733,7 +763,7 @@ struct rb_node *rb_post_next(const struct rb_node *node)
     parent = node->parent;
 
     if (parent && node == parent->left && parent->right)
-        return left_deep(parent->right);
+        return rb_left_deep(parent->right);
     else
         return (struct rb_node *)parent;
 }

@@ -7,6 +7,7 @@
 #define _RBTREE_H_
 
 #include <stddef.h>
+#include <limits.h>
 #include <stdbool.h>
 
 #define likely(x)   __builtin_expect(!!(x), 1)
@@ -16,12 +17,12 @@
 #define RB_BLACK    (1)
 #define RB_NSET     (2)
 
-typedef struct rb_node {
+struct rb_node {
     struct rb_node *parent;
     struct rb_node *left;
     struct rb_node *right;
     bool color;
-} rb_node_t;
+};
 
 struct rb_root {
     struct rb_node *rb_node;
@@ -68,7 +69,13 @@ extern void rb_erase(struct rb_root *root, struct rb_node *parent);
 extern struct rb_node *rb_remove(struct rb_root *root, struct rb_node *node);
 extern void rb_replace(struct rb_root *root, struct rb_node *old, struct rb_node *new);
 extern struct rb_node *rb_find(const struct rb_root *root, const void *key, rb_find_t);
+extern struct rb_node *rb_find_last(struct rb_root *root, const void *key, rb_find_t cmp, struct rb_node **parentp, struct rb_node ***linkp);
 extern struct rb_node **rb_parent(struct rb_root *root, struct rb_node **parentp, struct rb_node *node, rb_cmp_t, bool *leftmost);
+
+extern struct rb_node *rb_left_far(const struct rb_node *node);
+extern struct rb_node *rb_right_far(const struct rb_node *node);
+extern struct rb_node *rb_left_deep(const struct rb_node *node);
+extern struct rb_node *rb_right_deep(const struct rb_node *node);
 
 /* Middle iteration (Sequential) - find logical next and previous nodes */
 extern struct rb_node *rb_first(const struct rb_root *root);
@@ -82,8 +89,8 @@ extern struct rb_node *rb_next(const struct rb_node *node);
 #define rb_next_entry(pos, member) \
     rb_entry_safe(rb_next(&(pos)->member), typeof(*(pos)), member)
 
-#define rb_for_each_entry(pos, root, member) \
-    for (pos = rb_first_entry(root, typeof(*pos), member); \
+#define rb_for_each_entry(pos, root, member)                    \
+    for (pos = rb_first_entry(root, typeof(*pos), member);      \
          pos; pos = rb_next_entry(pos, member))
 
 /* Postorder iteration (Depth-first) - always visit the parent after its children */
@@ -96,13 +103,13 @@ extern struct rb_node *rb_post_next(const struct rb_node *node);
 #define rb_post_next_entry(pos, member) \
     rb_entry_safe(rb_post_next(&(pos)->member), typeof(*(pos)), member)
 
-#define rb_post_for_each_entry(pos, root, member) \
+#define rb_post_for_each_entry(pos, root, member)               \
     for (pos = rb_post_first_entry(root, typeof(*pos), member); \
          pos; pos = rb_post_next_entry(pos, member))
 
-#define rb_post_for_each_entry_safe(pos, next, root, member) \
+#define rb_post_for_each_entry_safe(pos, next, root, member)    \
     for (pos = rb_post_first_entry(root, typeof(*pos), member); \
-         pos && ({ next = rb_post_next_entry(pos, member); \
+         pos && ({ next = rb_post_next_entry(pos, member);      \
          1; }); pos = next)
 
 /**
@@ -111,8 +118,7 @@ extern struct rb_node *rb_post_next(const struct rb_node *node);
  * @link: point to pointer to child node.
  * @node: new node to link.
  */
-static inline void rb_link(struct rb_node *parent,
-                           struct rb_node **link, struct rb_node *node)
+static inline void rb_link(struct rb_node *parent, struct rb_node **link, struct rb_node *node)
 {
     /* link = &parent->left/right */
     *link = node;
@@ -141,8 +147,7 @@ static inline void rb_insert_node(struct rb_root *root, struct rb_node *parent,
  * @node: new node to insert.
  * @cmp: operator defining the node order.
  */
-static inline void rb_insert(struct rb_root *root, struct rb_node *node,
-                            long (*cmp)(const struct rb_node *, const struct rb_node *))
+static inline void rb_insert(struct rb_root *root, struct rb_node *node, rb_cmp_t cmp)
 {
     struct rb_node *parent, **link;
 
@@ -181,7 +186,7 @@ static inline void rb_delete(struct rb_root *root, struct rb_node *node)
  * rb_cached_fixup - balance after insert cached node.
  * @cached: rbtree cached root of node.
  * @node: new inserted node.
- * @leftmost:
+ * @leftmost: is it the leftmost node.
  */
 static inline void rb_cached_fixup(struct rb_root_cached *cached,
                                    struct rb_node *node, bool leftmost)
@@ -198,7 +203,7 @@ static inline void rb_cached_fixup(struct rb_root_cached *cached,
  * @parent: parent node of node.
  * @link: point to pointer to child node.
  * @node: new node to link.
- * @leftmost: new node to link.
+ * @leftmost: is it the leftmost node.
  */
 static inline void rb_cached_insert_node(struct rb_root_cached *cached, struct rb_node *parent,
                                          struct rb_node **link, struct rb_node *node, bool leftmost)
