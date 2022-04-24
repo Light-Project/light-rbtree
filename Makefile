@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
-flags = -g -O2 -Wall -Werror -Wextra -I src/
+flags = -g -O2 -Wall -Werror -Wextra -I src/ -D DEBUG_RBTREE
 head  = src/rbtree.h
-obj   = src/rbtree.o
+obj   = src/rbtree.o src/debug.o
 demo  = examples/benchmark examples/simple
 
 all: $(demo)
@@ -12,7 +12,7 @@ all: $(demo)
 
 $(demo): $(obj) $(addsuffix .c,$(demo))
 	@ echo -e "  \e[34mMKELF\e[0m	" $@
-	@ gcc -o $@ $@.c $<  $(flags)
+	@ gcc -o $@ $@.c $(obj) $(flags)
 
 clean:
 	@ rm -f $(obj) $(demo)
