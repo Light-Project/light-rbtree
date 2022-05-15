@@ -92,7 +92,7 @@ int main(void)
 
     ticks = sysconf(_SC_CLK_TCK);
 
-    printf("Generate %d Node:\n", TEST_LEN);
+    printf("Generate %u Node:\n", TEST_LEN);
     start = times(&start_tms);
     for (count = 0; count < TEST_LEN; ++count) {
         node = malloc(sizeof(*node));
@@ -114,22 +114,42 @@ int main(void)
     time_dump(ticks, start, stop, &start_tms, &stop_tms);
 
     count = bc_deepth(&bench_root);
-    printf("  rb deepth: %d\n", count);
+    printf("  rb deepth: %u\n", count);
 
     /* Start detection middle order iteration. */
     start = times(&start_tms);
+    count = 0;
     printf("Middle Iteration:\n");
-    bc_for_each_entry(node, &bench_root, rb)
+    bc_for_each_entry(node, &bench_root, rb) {
         node_dump(node);
+        count++;
+    }
     stop = times(&stop_tms);
+    printf("  total num: %u\n", count);
     time_dump(ticks, start, stop, &start_tms, &stop_tms);
 
     /* Start detection postorder order iteration. */
     start = times(&start_tms);
+    count = 0;
     printf("Postorder Iteration:\n");
-    bc_post_for_each_entry(node, &bench_root, rb)
+    bc_post_for_each_entry(node, &bench_root, rb) {
         node_dump(node);
+        count++;
+    }
     stop = times(&stop_tms);
+    printf("  total num: %u\n", count);
+    time_dump(ticks, start, stop, &start_tms, &stop_tms);
+
+    /* Start detection postorder order safe iteration. */
+    start = times(&start_tms);
+    count = 0;
+    printf("Postorder Safe Iteration:\n");
+    bc_post_for_each_entry_safe(node, tmp, &bench_root, rb) {
+        node_dump(node);
+        count++;
+    }
+    stop = times(&stop_tms);
+    printf("  total num: %u\n", count);
     time_dump(ticks, start, stop, &start_tms, &stop_tms);
 
     printf("Deletion All Node...\n");
