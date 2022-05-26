@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
-flags = -g -O2 -Wall -Werror -Wextra -I src/ -D DEBUG_RBTREE
+flags = -g -O2 -Wall -Werror -I src/ -D DEBUG_RBTREE
 head  = src/rbtree.h
 obj   = src/rbtree.o src/debug.o
 demo  = examples/benchmark examples/simple

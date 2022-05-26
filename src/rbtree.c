@@ -13,7 +13,7 @@
  * @old: node to be replaced.
  * @new: new node to insert.
  */
-static inline void
+static __always_inline void
 child_change(struct rb_root *root, struct rb_node *parent,
              struct rb_node *old, struct rb_node *new)
 {
@@ -33,10 +33,12 @@ child_change(struct rb_root *root, struct rb_node *parent,
  * @child: managed child node.
  * @color: color after rotation.
  * @ccolor: color of child.
+ * @callbacks: augmented callback function.
  */
-static inline void
+static __always_inline void
 rotate_set(struct rb_root *root, struct rb_node *node, struct rb_node *new,
-           struct rb_node *child, unsigned int color, unsigned int ccolor)
+           struct rb_node *child, unsigned int color, unsigned int ccolor,
+           const struct rb_callbacks *callbacks)
 {
     struct rb_node *parent = node->parent;
 
@@ -55,6 +57,7 @@ rotate_set(struct rb_root *root, struct rb_node *node, struct rb_node *new,
     }
 
     child_change(root, parent, node, new);
+    callbacks->rotate(node, new);
 }
 
 /**
@@ -63,10 +66,12 @@ rotate_set(struct rb_root *root, struct rb_node *node, struct rb_node *new,
  * @node: node to rotation.
  * @color: color after rotation.
  * @ccolor: color of child.
+ * @callbacks: augmented callback function.
  */
-static inline struct rb_node *
+static __always_inline struct rb_node *
 left_rotate(struct rb_root *root, struct rb_node *node,
-            unsigned int color, unsigned int ccolor)
+            unsigned int color, unsigned int ccolor,
+            const struct rb_callbacks *callbacks)
 {
     struct rb_node *child, *successor = node->right;
 
@@ -74,7 +79,7 @@ left_rotate(struct rb_root *root, struct rb_node *node,
     child = node->right = successor->left;
     successor->left = node;
 
-    rotate_set(root, node, successor, child, color, ccolor);
+    rotate_set(root, node, successor, child, color, ccolor, callbacks);
     return child;
 }
 
@@ -84,10 +89,12 @@ left_rotate(struct rb_root *root, struct rb_node *node,
  * @node: node to rotation.
  * @color: color after rotation.
  * @ccolor: color of child.
+ * @callbacks: augmented callback function.
  */
-static inline struct rb_node *
+static __always_inline struct rb_node *
 right_rotate(struct rb_root *root, struct rb_node *node,
-             unsigned int color, unsigned int ccolor)
+             unsigned int color, unsigned int ccolor,
+             const struct rb_callbacks *callbacks)
 {
     struct rb_node *child, *successor = node->left;
 
@@ -95,16 +102,18 @@ right_rotate(struct rb_root *root, struct rb_node *node,
     child = node->left = successor->right;
     successor->right = node;
 
-    rotate_set(root, node, successor, child, color, ccolor);
+    rotate_set(root, node, successor, child, color, ccolor, callbacks);
     return child;
 }
 
 /**
- * rb_fixup - balance after insert node.
+ * rb_fixup_augmented - augmented balance after insert node.
  * @root: rbtree root of node.
  * @node: new inserted node.
+ * @callbacks: augmented callback function.
  */
-void rb_fixup(struct rb_root *root, struct rb_node *node)
+void rb_fixup_augmented(struct rb_root *root, struct rb_node *node,
+                        const struct rb_callbacks *callbacks)
 {
     struct rb_node *parent, *gparent, *tmp;
 
@@ -174,7 +183,7 @@ void rb_fixup(struct rb_root *root, struct rb_node *node)
              */
 
             if (node == parent->right)
-                left_rotate(root, parent, RB_NSET, RB_BLACK);
+                left_rotate(root, parent, RB_NSET, RB_BLACK, callbacks);
 
             /*
              * Case 3 - node's uncle is black and node is
@@ -187,7 +196,7 @@ void rb_fixup(struct rb_root *root, struct rb_node *node)
              *    n   s           S   U
              */
 
-            right_rotate(root, gparent, RB_RED, RB_BLACK);
+            right_rotate(root, gparent, RB_RED, RB_BLACK, callbacks);
             break;
         } else {
             /* parent == gparent->right */
@@ -203,21 +212,23 @@ void rb_fixup(struct rb_root *root, struct rb_node *node)
 
             /* Case 2 - right rotate at parent */
             if (node == parent->left)
-                right_rotate(root, parent, RB_NSET, RB_BLACK);
+                right_rotate(root, parent, RB_NSET, RB_BLACK, callbacks);
 
             /* Case 3 - left rotate at gparent */
-            left_rotate(root, gparent, RB_RED, RB_BLACK);
+            left_rotate(root, gparent, RB_RED, RB_BLACK, callbacks);
             break;
         }
     }
 }
 
 /**
- * rb_erase - balance after remove node.
+ * rb_erase_augmented - augmented balance after remove node.
  * @root: rbtree root of node.
  * @parent: parent of removed node.
+ * @callbacks: augmented callback function.
  */
-void rb_erase(struct rb_root *root, struct rb_node *parent)
+void rb_erase_augmented(struct rb_root *root, struct rb_node *parent,
+                        const struct rb_callbacks *callbacks)
 {
     struct rb_node *tmp1, *tmp2, *sibling, *node = NULL;
 
@@ -243,7 +254,7 @@ void rb_erase(struct rb_root *root, struct rb_node *parent)
              */
 
             if (sibling->color == RB_RED)
-                sibling = left_rotate(root, parent, RB_RED, RB_BLACK);
+                sibling = left_rotate(root, parent, RB_RED, RB_BLACK, callbacks);
 
             tmp2 = sibling->right;
             if (!tmp2 || tmp2->color == RB_BLACK) {
@@ -306,7 +317,7 @@ void rb_erase(struct rb_root *root, struct rb_node *parent)
                  *          Sr
                  */
 
-                right_rotate(root, sibling, RB_NSET, RB_BLACK);
+                right_rotate(root, sibling, RB_NSET, RB_BLACK, callbacks);
                 tmp2 = sibling;
             }
 
@@ -323,7 +334,7 @@ void rb_erase(struct rb_root *root, struct rb_node *parent)
              *      (sl) sr      N  (sl)
              */
 
-            left_rotate(root, parent, RB_BLACK, RB_NSET);
+            left_rotate(root, parent, RB_BLACK, RB_NSET, callbacks);
             tmp2->color = RB_BLACK;
             break;
         } else {
@@ -331,7 +342,7 @@ void rb_erase(struct rb_root *root, struct rb_node *parent)
 
             /* Case 1 - right rotate at parent */
             if (sibling->color == RB_RED)
-                sibling = right_rotate(root, parent, RB_RED, RB_BLACK);
+                sibling = right_rotate(root, parent, RB_RED, RB_BLACK, callbacks);
 
             tmp1 = sibling->left;
             if (!tmp1 || tmp1->color == RB_BLACK) {
@@ -352,12 +363,12 @@ void rb_erase(struct rb_root *root, struct rb_node *parent)
                 }
 
                 /* Case 3 - left rotate at sibling */
-                left_rotate(root, sibling, RB_NSET, RB_BLACK);
+                left_rotate(root, sibling, RB_NSET, RB_BLACK, callbacks);
                 tmp1 = sibling;
             }
 
             /* Case 4 - right rotate at parent + color flips */
-            right_rotate(root, parent, RB_BLACK, RB_NSET);
+            right_rotate(root, parent, RB_BLACK, RB_NSET, callbacks);
             tmp1->color = RB_BLACK;
             break;
         }
@@ -365,11 +376,13 @@ void rb_erase(struct rb_root *root, struct rb_node *parent)
 }
 
 /**
- * rb_remove - remove node form rbtree.
+ * rb_remove_augmented - augmented remove node form rbtree.
  * @root: rbtree root of node.
  * @node: node to remove.
+ * @callbacks: augmented callback function.
  */
-struct rb_node *rb_remove(struct rb_root *root, struct rb_node *node)
+struct rb_node *rb_remove_augmented(struct rb_root *root, struct rb_node *node,
+                                    const struct rb_callbacks *callbacks)
 {
     struct rb_node *parent = node->parent, *rebalance = NULL;
     struct rb_node *child1 = node->left;
@@ -434,6 +447,7 @@ struct rb_node *rb_remove(struct rb_root *root, struct rb_node *node)
 
             parent = successor;
             tmp = successor->right;
+            callbacks->copy(node, successor);
         } else {
             /*
              * Case 3: node's successor is leftmost under
@@ -460,6 +474,9 @@ struct rb_node *rb_remove(struct rb_root *root, struct rb_node *node)
             parent->left = tmp;
             successor->right = child2;
             child2->parent = successor;
+
+            callbacks->copy(node, successor);
+            callbacks->propagate(parent, successor);
         }
 
         child1 = node->left;
@@ -477,9 +494,51 @@ struct rb_node *rb_remove(struct rb_root *root, struct rb_node *node)
 
         successor->parent = child1;
         successor->color = node->color;
+        parent = successor;
     }
 
+    callbacks->propagate(parent, NULL);
     return rebalance;
+}
+
+static void dummy_rotate(struct rb_node *node, struct rb_node *successor) {}
+static void dummy_copy(struct rb_node *node, struct rb_node *successor) {}
+static void dummy_propagate(struct rb_node *node, struct rb_node *stop) {}
+
+static const struct rb_callbacks dummy_callbacks = {
+    .rotate = dummy_rotate,
+    .copy = dummy_copy,
+    .propagate = dummy_propagate,
+};
+
+/**
+ * rb_fixup - balance after insert node.
+ * @root: rbtree root of node.
+ * @node: new inserted node.
+ */
+void rb_fixup(struct rb_root *root, struct rb_node *node)
+{
+    rb_fixup_augmented(root, node, &dummy_callbacks);
+}
+
+/**
+ * rb_erase - balance after remove node.
+ * @root: rbtree root of node.
+ * @parent: parent of removed node.
+ */
+void rb_erase(struct rb_root *root, struct rb_node *parent)
+{
+    rb_erase_augmented(root, parent, &dummy_callbacks);
+}
+
+/**
+ * rb_remove - remove node form rbtree.
+ * @root: rbtree root of node.
+ * @node: node to remove.
+ */
+struct rb_node *rb_remove(struct rb_root *root, struct rb_node *node)
+{
+    return rb_remove_augmented(root, node, &dummy_callbacks);
 }
 
 /**
