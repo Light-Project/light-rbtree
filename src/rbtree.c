@@ -847,12 +847,20 @@ struct rb_node *rb_pre_next(const struct rb_node *node)
     if (!node)
         return NULL;
 
+    /**
+     * If there are left and right child nodes,
+     * then we iterate directly.
+     */
     if (node->left)
         return node->left;
 
     if (node->right)
         return node->right;
 
+    /**
+     * if we have no children, Go up till we find an ancestor
+     * which have a another right-hand child.
+     */
     while ((parent = node->parent) && (!parent->right || node == parent->right))
         node = parent;
 
@@ -870,8 +878,7 @@ struct rb_node *rb_post_first(const struct rb_root *root)
     if (!root || !node)
         return NULL;
 
-    node = rb_left_deep(node);
-    return node;
+    return rb_left_deep(node);
 }
 
 struct rb_node *rb_post_next(const struct rb_node *node)

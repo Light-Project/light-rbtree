@@ -657,7 +657,7 @@ static inline void rb_delete_augmented(struct rb_root *root, struct rb_node *nod
          pos; pos = rb_next_entry(pos, member))
 
 /**
- * rb_for_each_entry_reverse - iterate backwards over cached rbtree of given type.
+ * rb_cached_for_each_entry_reverse - iterate backwards over cached rbtree of given type.
  * @pos: the type * to use as a loop cursor.
  * @cached: the cached root for your rbtree.
  * @member: the name of the rb_node within the struct.
