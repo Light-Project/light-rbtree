@@ -18,7 +18,7 @@ child_change(struct rb_root *root, struct rb_node *parent,
              struct rb_node *old, struct rb_node *new)
 {
     if (!parent)
-        root->rb_node = new;
+        root->node = new;
     else if (parent->left == old)
         parent->left = new;
     else
@@ -569,7 +569,7 @@ void rb_replace(struct rb_root *root, struct rb_node *old, struct rb_node *new)
  */
 struct rb_node *rb_find(const struct rb_root *root, const void *key, rb_find_t cmp)
 {
-    struct rb_node *node = root->rb_node;
+    struct rb_node *node = root->node;
     long ret;
 
     while (node) {
@@ -600,7 +600,7 @@ struct rb_node *rb_find_last(struct rb_root *root, const void *key, rb_find_t cm
 {
     long ret;
 
-    *linkp = &root->rb_node;
+    *linkp = &root->node;
     if (unlikely(!**linkp)) {
         *parentp = NULL;
         return NULL;
@@ -639,7 +639,7 @@ struct rb_node **rb_parent(struct rb_root *root, struct rb_node **parentp,
     if (!leftmost)
         leftmost = &leftmost_none;
 
-    link = &root->rb_node;
+    link = &root->node;
     if (unlikely(!*link)) {
         *parentp = NULL;
         return link;
@@ -676,7 +676,7 @@ struct rb_node **rb_parent_conflict(struct rb_root *root, struct rb_node **paren
     if (!leftmost)
         leftmost = &leftmost_none;
 
-    link = &root->rb_node;
+    link = &root->node;
     if (unlikely(!*link)) {
         *parentp = NULL;
         return link;
@@ -762,7 +762,7 @@ struct rb_node *rb_right_deep(const struct rb_node *node)
  */
 struct rb_node *rb_first(const struct rb_root *root)
 {
-    struct rb_node *node = root->rb_node;
+    struct rb_node *node = root->node;
 
     if (!root || !node)
         return NULL;
@@ -774,7 +774,7 @@ struct rb_node *rb_first(const struct rb_root *root)
 
 struct rb_node *rb_last(const struct rb_root *root)
 {
-    struct rb_node *node = root->rb_node;
+    struct rb_node *node = root->node;
 
     if (!root || !node)
         return NULL;
@@ -873,7 +873,7 @@ struct rb_node *rb_pre_next(const struct rb_node *node)
  */
 struct rb_node *rb_post_first(const struct rb_root *root)
 {
-    struct rb_node *node = root->rb_node;
+    struct rb_node *node = root->node;
 
     if (!root || !node)
         return NULL;

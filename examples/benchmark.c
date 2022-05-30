@@ -45,7 +45,7 @@ static RB_ROOT_CACHED(bench_root);
 # define bc_for_each_entry              rb_cached_for_each_entry
 # define bc_post_for_each_entry         rb_cached_post_for_each_entry
 # define bc_post_for_each_entry_safe    rb_cached_post_for_each_entry_safe
-# define bc_deepth(cached)              test_deepth((cached)->root.rb_node)
+# define bc_deepth(cached)              test_deepth((cached)->root.node)
 #else
 static RB_ROOT(bench_root);
 # define bc_insert                      rb_insert
@@ -53,7 +53,7 @@ static RB_ROOT(bench_root);
 # define bc_for_each_entry              rb_for_each_entry
 # define bc_post_for_each_entry         rb_post_for_each_entry
 # define bc_post_for_each_entry_safe    rb_post_for_each_entry_safe
-# define bc_deepth(root)                test_deepth((root)->rb_node)
+# define bc_deepth(root)                test_deepth((root)->node)
 #endif
 
 static void time_dump(int ticks, clock_t start, clock_t stop, struct tms *start_tms, struct tms *stop_tms)
