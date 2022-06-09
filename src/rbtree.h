@@ -64,11 +64,23 @@ struct rb_callbacks {
 #define RB_CLEAR_NODE(node) \
     ((node)->parent = (node))
 
+/**
+ * rb_entry - get the struct for this entry.
+ * @ptr: the &struct rb_node pointer.
+ * @type: the type of the struct this is embedded in.
+ * @member: the name of the rb_node within the struct.
+ */
 #define rb_entry(ptr, type, member) ({                  \
     const typeof(((type *)0)->member) *__mptr = (ptr);  \
     (type *)((char *)__mptr - offsetof(type,member));   \
 })
 
+/**
+ * rb_entry_safe - get the struct for this entry or null.
+ * @ptr: the &struct rb_node pointer.
+ * @type: the type of the struct this is embedded in.
+ * @member: the name of the rb_node within the struct.
+ */
 #define rb_entry_safe(ptr, type, member) ({             \
     typeof(ptr) _ptr = (ptr);                           \
     _ptr ? rb_entry(_ptr, type, member) : NULL;         \
