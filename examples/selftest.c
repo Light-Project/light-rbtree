@@ -40,7 +40,7 @@ static int rbtree_test_testing(struct rbtree_test_pdata *sdata)
 {
     struct rbtree_test_node *node, *nnode, *tnode;
     struct rb_node *rbnode, *nrbnode, *trbnode;
-    unsigned int count;
+    unsigned long count;
 
     RB_ROOT_CACHED(test_root);
 
@@ -162,6 +162,13 @@ static int rbtree_test_testing(struct rbtree_test_pdata *sdata)
     }
 
     count = 0;
+    rb_post_for_each_entry(node, &test_root.root, node) {
+        printf("rbtree 'rb_post_for_each_entry' test: %lu\n", node->num);
+        if (count++ == TEST_LOOP / 2)
+            break;
+    }
+
+    count = 0;
     rb_pre_for_each(rbnode, &test_root.root) {
         node = rbnode_to_test(rbnode);
         printf("rbtree 'rb_pre_for_each' test: %lu\n", node->num);
@@ -175,7 +182,7 @@ static int rbtree_test_testing(struct rbtree_test_pdata *sdata)
         printf("rbtree 'rb_pre_for_each_continue' test: %lu\n", node->num);
     }
 
-    node = tnode;
+    rbnode = trbnode;
     rb_pre_for_each_from(rbnode) {
         node = rbnode_to_test(rbnode);
         printf("rbtree 'rb_pre_for_each_from' test: %lu\n", node->num);
@@ -199,8 +206,46 @@ static int rbtree_test_testing(struct rbtree_test_pdata *sdata)
     }
 
     count = 0;
-    rb_post_for_each_entry(node, &test_root.root, node) {
-        printf("rbtree 'rb_post_for_each_entry' test: %lu\n", node->num);
+    rb_level_for_each(rbnode, &count, &test_root.root) {
+        node = rbnode_to_test(rbnode);
+        printf("rbtree 'rb_level_for_each' test: %lu\n", node->num);
+        if (count++ == TEST_LOOP / 2)
+            break;
+    }
+
+    trbnode = rbnode;
+    rb_level_for_each_continue(rbnode, &count, &test_root.root) {
+        node = rbnode_to_test(rbnode);
+        printf("rbtree 'rb_level_for_each_continue' test: %lu\n", node->num);
+    }
+
+    rbnode = trbnode;
+    rb_level_for_each_from(rbnode, &count, &test_root.root) {
+        node = rbnode_to_test(rbnode);
+        printf("rbtree 'rb_level_for_each_from' test: %lu\n", node->num);
+    }
+
+    count = 0;
+    rb_level_for_each_entry(node, &count, &test_root.root, node) {
+        printf("rbtree 'rb_level_for_each_entry' test: %lu\n", node->num);
+        if (count++ == TEST_LOOP / 2)
+            break;
+    }
+
+    tnode = node;
+    rb_level_for_each_entry_from(node, &count, &test_root.root, node) {
+        printf("rbtree 'rb_level_for_each_entry_from' test: %lu\n", node->num);
+    }
+
+    node = tnode;
+    rb_level_for_each_entry_continue(node, &count, &test_root.root, node) {
+        printf("rbtree 'rb_level_for_each_entry_continue' test: %lu\n", node->num);
+    }
+
+    count = 0;
+    rb_post_for_each(rbnode, &test_root.root) {
+        node = rbnode_to_test(rbnode);
+        printf("rbtree 'rb_post_for_each' test: %lu\n", node->num);
         if (count++ == TEST_LOOP / 2)
             break;
     }
@@ -257,6 +302,15 @@ static int rbtree_test_testing(struct rbtree_test_pdata *sdata)
 
     rb_cached_pre_for_each_entry(node, &test_root, node) {
         printf("rbtree 'rb_cached_pre_for_each_entry' test: %lu\n", node->num);
+    }
+
+    rb_cached_level_for_each(rbnode, &count, &test_root) {
+        node = rbnode_to_test(rbnode);
+        printf("rbtree 'rb_cached_level_for_each' test: %lu\n", node->num);
+    }
+
+    rb_cached_level_for_each_entry(node, &count, &test_root, node) {
+        printf("rbtree 'rb_cached_level_for_each_entry' test: %lu\n", node->num);
     }
 
     rb_cached_post_for_each(rbnode, &test_root) {
