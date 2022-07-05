@@ -7,14 +7,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-/**
- * ARRAY_SIZE - get the number of elements in array.
- * @arr: array to be sized.
- */
-#define ARRAY_SIZE(arr) ( \
-    sizeof(arr) / sizeof((arr)[0]) \
-)
-
 #define TEST_LOOP 10
 
 struct rbtree_test_node {
@@ -29,11 +21,21 @@ struct rbtree_test_pdata {
 #define rbnode_to_test(ptr) \
     rb_entry(ptr, struct rbtree_test_node, node)
 
+#define rbnode_to_test_safe(ptr) \
+    rb_entry_safe(ptr, struct rbtree_test_node, node)
+
 static long rbtest_rb_cmp(const struct rb_node *rba, const struct rb_node *rbb)
 {
     struct rbtree_test_node *nodea = rbnode_to_test(rba);
     struct rbtree_test_node *nodeb = rbnode_to_test(rbb);
-    return nodea->num - nodeb->num;
+    return nodea->num > nodeb->num ? -1 : 1;
+}
+
+static long rbtest_rb_find(const struct rb_node *rb, const void *key)
+{
+    struct rbtree_test_node *node = rbnode_to_test(rb);
+    if (node->num == (unsigned long)key) return 0;
+    return (unsigned long)key > node->num ? -1 : 1;
 }
 
 static int rbtree_test_testing(struct rbtree_test_pdata *sdata)
@@ -44,8 +46,22 @@ static int rbtree_test_testing(struct rbtree_test_pdata *sdata)
 
     RB_ROOT_CACHED(test_root);
 
-    for (count = 0; count < ARRAY_SIZE(sdata->nodes); ++count)
+    for (count = 0; count < TEST_LOOP; ++count)
         rb_cached_insert(&test_root, &sdata->nodes[count].node, rbtest_rb_cmp);
+
+    for (count = 0; count < TEST_LOOP; ++count) {
+        rbnode = rb_find(&test_root.root, (void *)count, rbtest_rb_find);
+        if (!(node = rbnode_to_test_safe(rbnode)))
+            return -EFAULT;
+        printf("rbtree 'rb_cached' test: %lu\n", node->num);
+    }
+
+    for (count = 0; count < TEST_LOOP; ++count) {
+        rbnode = rb_cached_find(&test_root, (void *)count, rbtest_rb_find);
+        if (!(node = rbnode_to_test_safe(rbnode)))
+            return -EFAULT;
+        printf("rbtree 'rb_cached_find' test: %lu\n", node->num);
+    }
 
     count = 0;
     rb_for_each(rbnode, &test_root.root) {
@@ -332,7 +348,7 @@ static int rbtree_test_testing(struct rbtree_test_pdata *sdata)
         rb_cached_delete(&test_root, &node->node);
     }
 
-    return 0;
+    return RB_EMPTY_ROOT_CACHED(&test_root) ? 0 : -EFAULT;
 }
 
 int main(void)
@@ -345,7 +361,7 @@ int main(void)
     if (!rdata)
         return -1;
 
-    for (count = 0; count < ARRAY_SIZE(rdata->nodes); ++count)
+    for (count = 0; count < TEST_LOOP; ++count)
         rdata->nodes[count].num = TEST_LOOP - count - 1;
 
     retval = rbtree_test_testing(rdata);
