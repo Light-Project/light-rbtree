@@ -11,9 +11,6 @@
 #include <limits.h>
 #include <stdbool.h>
 
-#define likely(x)   __builtin_expect(!!(x), 1)
-#define unlikely(x) __builtin_expect(!!(x), 0)
-
 #define RB_RED      (0)
 #define RB_BLACK    (1)
 #define RB_NSET     (2)
@@ -91,6 +88,11 @@ struct rb_callbacks {
     typeof(ptr) _ptr = (ptr);                           \
     _ptr ? rb_entry(_ptr, type, member) : NULL;         \
 })
+
+#ifndef likely
+# define likely(x) __builtin_expect(!!(x), 1)
+# define unlikely(x) __builtin_expect(!!(x), 0)
+#endif
 
 #ifndef POISON_OFFSET
 # define POISON_OFFSET 0
