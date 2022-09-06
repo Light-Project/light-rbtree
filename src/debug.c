@@ -14,12 +14,6 @@ bool rb_debug_link_check(struct rb_node *parent, struct rb_node **link, struct r
         return false;
     }
 
-    if (unlikely(node->parent && node->parent == parent)) {
-        fprintf(stderr, "rb_insert corruption (%p) node->parent should not be next (%p)\n",
-        node, parent);
-        return false;
-    }
-
     return true;
 }
 
