@@ -26,7 +26,7 @@ struct bench_node {
 #if RB_DEBUG
 static void node_dump(struct bench_node *node)
 {
-    printf("  %04d: ", node->num);
+    printf("\t%04d: ", node->num);
     printf("parent %-4d ", node->rb.parent ? rb_to_bench(node->rb.parent)->num : 0);
     printf("left %-4d ", node->rb.left ? rb_to_bench(node->rb.left)->num : 0);
     printf("right %-4d ", node->rb.right ? rb_to_bench(node->rb.right)->num : 0);
@@ -58,9 +58,9 @@ static RB_ROOT(bench_root);
 
 static void time_dump(int ticks, clock_t start, clock_t stop, struct tms *start_tms, struct tms *stop_tms)
 {
-    printf("  real time: %lf\n", (stop - start) / (double)ticks);
-    printf("  user time: %lf\n", (stop_tms->tms_utime - start_tms->tms_utime) / (double)ticks);
-    printf("  kern time: %lf\n", (stop_tms->tms_stime - start_tms->tms_stime) / (double)ticks);
+    printf("\treal time: %lf\n", (stop - start) / (double)ticks);
+    printf("\tuser time: %lf\n", (stop_tms->tms_utime - start_tms->tms_utime) / (double)ticks);
+    printf("\tkern time: %lf\n", (stop_tms->tms_stime - start_tms->tms_stime) / (double)ticks);
 }
 
 static unsigned int test_deepth(struct rb_node *node)
@@ -88,33 +88,32 @@ int main(void)
     struct tms start_tms, stop_tms;
     clock_t start, stop;
     unsigned int count, ticks;
-    int ret = 0;
 
-    ticks = sysconf(_SC_CLK_TCK);
+    node = malloc(sizeof(*node) * TEST_LEN);
+    if (!node) {
+        printf("Insufficient Memory!\n");
+        return -ENOMEM;
+    }
 
     printf("Generate %u Node:\n", TEST_LEN);
-    start = times(&start_tms);
     for (count = 0; count < TEST_LEN; ++count) {
-        node = malloc(sizeof(*node));
-        if ((ret = !node)) {
-            printf("Insufficient Memory!\n");
-            goto error;
-        }
-
-        node->num = count + 1;
-        node->data = ((unsigned long)rand() << 32) | rand();
-
+        node[count].data = ((unsigned long)rand() << 32) | rand();
 #if RB_DEBUG
-        printf("  %08d: 0x%016lx\n", node->num, node->data);
+        node[count].num = count + 1;
+        printf("\t%08d: 0x%016lx\n", node->num, node->data);
 #endif
-
-        bc_insert(&bench_root, &node->rb, demo_cmp);
     }
+
+    printf("Insert Nodes:\n");
+    ticks = sysconf(_SC_CLK_TCK);
+    start = times(&start_tms);
+    for (count = 0; count < TEST_LEN; ++count)
+        bc_insert(&bench_root, &node[count].rb, demo_cmp);
     stop = times(&stop_tms);
     time_dump(ticks, start, stop, &start_tms, &stop_tms);
 
     count = bc_deepth(&bench_root);
-    printf("  rb deepth: %u\n", count);
+    printf("\trb deepth: %u\n", count);
 
     /* Start detection middle order iteration. */
     start = times(&start_tms);
@@ -125,7 +124,7 @@ int main(void)
         count++;
     }
     stop = times(&stop_tms);
-    printf("  total num: %u\n", count);
+    printf("\ttotal num: %u\n", count);
     time_dump(ticks, start, stop, &start_tms, &stop_tms);
 
     /* Start detection postorder order iteration. */
@@ -137,7 +136,7 @@ int main(void)
         count++;
     }
     stop = times(&stop_tms);
-    printf("  total num: %u\n", count);
+    printf("\ttotal num: %u\n", count);
     time_dump(ticks, start, stop, &start_tms, &stop_tms);
 
     /* Start detection postorder order safe iteration. */
@@ -149,20 +148,11 @@ int main(void)
         count++;
     }
     stop = times(&stop_tms);
-    printf("  total num: %u\n", count);
+    printf("\ttotal num: %u\n", count);
     time_dump(ticks, start, stop, &start_tms, &stop_tms);
 
-    printf("Deletion All Node...\n");
-error:
-    bc_post_for_each_entry_safe(node, tmp, &bench_root, rb) {
-        bc_delete(&bench_root, &node->rb);
-        free(node);
-    }
+    printf("Done.\n");
+    free(node);
 
-    if (!ret)
-        printf("Done.\n");
-    else
-        printf("Abort.\n");
-
-    return ret;
+    return 0;
 }
