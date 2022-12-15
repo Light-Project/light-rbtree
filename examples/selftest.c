@@ -430,8 +430,10 @@ int main(void)
     if (!rdata)
         return -1;
 
+    printf("Sequence Test...\n");
     for (count = 0; count < TEST_LOOP; ++count)
         rdata->nodes[count].data = count;
+
     retval = rbtree_test_testing(rdata);
     if (retval) {
         printf("Abort1.\n");
@@ -439,8 +441,10 @@ int main(void)
         return retval;
     }
 
+    printf("Random Test...\n");
     for (count = 0; count < TEST_LOOP; ++count)
         rdata->nodes[count].data = rand();
+
     retval = rbtree_test_testing(rdata);
     if (retval) {
         printf("Abort2.\n");
