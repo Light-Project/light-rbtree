@@ -7,7 +7,6 @@
 #define _RBTREE_H_
 
 #include <stddef.h>
-#include <errno.h>
 #include <limits.h>
 #include <stdbool.h>
 
@@ -533,16 +532,16 @@ static inline void rb_insert(struct rb_root *root, struct rb_node *node, rb_cmp_
  * @node: new node to insert.
  * @cmp: operator defining the node order.
  */
-static inline int rb_insert_conflict(struct rb_root *root, struct rb_node *node, rb_cmp_t cmp)
+static inline bool rb_insert_conflict(struct rb_root *root, struct rb_node *node, rb_cmp_t cmp)
 {
     struct rb_node *parent, **link;
 
     link = rb_parent_conflict(root, &parent, node, cmp, NULL);
     if (!link)
-        return -EFAULT;
+        return true;
 
     rb_insert_node(root, parent, link, node);
-    return 0;
+    return false;
 }
 
 /**
@@ -606,17 +605,17 @@ static inline void rb_insert_augmented(struct rb_root *root, struct rb_node *nod
  * @cmp: operator defining the node order.
  * @callbacks: augmented callback function.
  */
-static inline int rb_insert_conflict_augmented(struct rb_root *root, struct rb_node *node, rb_cmp_t cmp,
-                                                 const struct rb_callbacks *callbacks)
+static inline bool rb_insert_conflict_augmented(struct rb_root *root, struct rb_node *node, rb_cmp_t cmp,
+                                                const struct rb_callbacks *callbacks)
 {
     struct rb_node *parent, **link;
 
     link = rb_parent_conflict(root, &parent, node, cmp, NULL);
     if (!link)
-        return -EFAULT;
+        return true;
 
     rb_insert_node_augmented(root, parent, link, node, callbacks);
-    return 0;
+    return false;
 }
 
 /**
@@ -798,17 +797,17 @@ static inline void rb_cached_insert(struct rb_root_cached *cached, struct rb_nod
  * @node: new node to insert.
  * @cmp: operator defining the node order.
  */
-static inline int rb_cached_insert_conflict(struct rb_root_cached *cached, struct rb_node *node, rb_cmp_t cmp)
+static inline bool rb_cached_insert_conflict(struct rb_root_cached *cached, struct rb_node *node, rb_cmp_t cmp)
 {
     struct rb_node *parent, **link;
     bool leftmost = true;
 
     link = rb_cached_parent_conflict(cached, &parent, node, cmp, &leftmost);
     if (!link)
-        return -EFAULT;
+        return true;
 
     rb_cached_insert_node(cached, parent, link, node, leftmost);
-    return 0;
+    return false;
 }
 
 /**
@@ -884,18 +883,18 @@ static inline void rb_cached_insert_augmented(struct rb_root_cached *cached, str
  * @cmp: operator defining the node order.
  * @callbacks: augmented callback function.
  */
-static inline int rb_cached_insert_conflict_augmented(struct rb_root_cached *cached, struct rb_node *node,
-                                                      rb_cmp_t cmp, const struct rb_callbacks *callbacks)
+static inline bool rb_cached_insert_conflict_augmented(struct rb_root_cached *cached, struct rb_node *node,
+                                                       rb_cmp_t cmp, const struct rb_callbacks *callbacks)
 {
     struct rb_node *parent, **link;
     bool leftmost = true;
 
     link = rb_cached_parent_conflict(cached, &parent, node, cmp, &leftmost);
     if (!link)
-        return -EFAULT;
+        return true;
 
     rb_cached_insert_node_augmented(cached, parent, link, node, leftmost, callbacks);
-    return 0;
+    return false;
 }
 
 /**

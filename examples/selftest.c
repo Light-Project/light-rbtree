@@ -6,6 +6,7 @@
 #include "rbtree.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <errno.h>
 
 #define TEST_LOOP 100
 

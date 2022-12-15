@@ -6,6 +6,7 @@
 #include "rbtree.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <errno.h>
 
 #define TEST_LEN 10
 static RB_ROOT(simple_root);
