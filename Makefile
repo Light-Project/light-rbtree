@@ -1,8 +1,8 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 flags = -g -O2 -Wall -Werror -I src/ -I titer/src/ -D DEBUG_RBTREE
-head  = src/rbtree.h titer/src/titer.h
-obj   = src/rbtree.o src/debug.o
-demo  = examples/benchmark examples/simple examples/selftest
+head = src/rbtree.h
+obj = src/rbtree.o src/debug.o
+demo = examples/benchmark examples/simple examples/selftest
 
 all: $(demo)
 

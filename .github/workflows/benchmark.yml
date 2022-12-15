@@ -13,10 +13,12 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
-    - name: submodule
-      run:  git submodule update --init
     - name: make
       run:  make
+    - name: simple
+      run:  ./examples/simple
+    - name: selftest
+      run:  ./examples/selftest
     - name: benchmark
       run:  ./examples/benchmark
     - name: make clean
