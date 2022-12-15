@@ -29,12 +29,13 @@ int main(void)
 {
     struct simple_node *node, *tmp;
     unsigned int count;
-    int ret = 0;
 
     for (count = 0; count < TEST_LEN; ++count) {
         node = malloc(sizeof(*node));
-        if ((ret = !node))
-            goto error;
+        if (!node) {
+            printf("Abort.\n");
+            return -ENOMEM;
+        }
 
         node->data = ((unsigned long)rand() << 32) | rand();
         rb_insert(&simple_root, &node->rb, demo_cmp);
@@ -48,14 +49,9 @@ int main(void)
     rb_post_for_each_entry(node, &simple_root, rb)
         printf("  0x%16lx\n", node->data);
 
-error:
-    rb_post_for_each_entry_safe(node, tmp, &simple_root, rb) {
-        rb_delete(&simple_root, &node->rb);
+    rb_post_for_each_entry_safe(node, tmp, &simple_root, rb)
         free(node);
-    }
 
-    if (ret)
-        printf("Abort.\n");
-
-    return ret;
+    printf("Done.\n");
+    return 0;
 }
